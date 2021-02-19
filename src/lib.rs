@@ -1,3 +1,17 @@
+//! Peter builds on the [`ansi_term`] crate to allow styling of anything
+//! implementing [`Display`] and makes colorizing text less verbose to use by
+//! providing the [`Stylize`] trait.
+//!
+//! # Examples
+//!
+//! ```rust
+//! use peter::Stylize;
+//!
+//! println!("This is in red: {}", "a red string".red());
+//!
+//! println!("How about some {}?", "bold and underline".bold().underline());
+//! ```
+
 use std::fmt;
 use std::fmt::Display;
 use std::ops::{Deref, DerefMut};
