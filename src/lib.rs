@@ -16,7 +16,11 @@ use std::fmt;
 use std::fmt::Display;
 use std::ops::{Deref, DerefMut};
 
-use ansi_term::{Color, Style};
+use ansi_term::Style;
+
+/// See [`ansi_term::Color`].
+///
+pub use ansi_term::Color;
 
 /// Wraps something in a [`Style`].
 #[derive(Debug, Clone, Copy, PartialEq)]
