@@ -12,9 +12,11 @@
 //! println!("How about some {}?", "bold and underline".bold().underline());
 //! ```
 
-use std::fmt;
-use std::fmt::Display;
-use std::ops::{Deref, DerefMut};
+#![no_std]
+
+use core::fmt;
+use core::fmt::Display;
+use core::ops::{Deref, DerefMut};
 
 use ansi_term::Style;
 

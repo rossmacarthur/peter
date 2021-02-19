@@ -9,7 +9,7 @@ providing the [`Stylize`] trait.
 
 [`ansi_term`]: https://github.com/ogham/rust-ansi-term
 [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
-[`Stylize`]: https://docs.rs/peter/0.1/stride/trait.Stylize.html
+[`Stylize`]: https://docs.rs/peter/0.1/peter/trait.Stylize.html
 
 ## Getting started
 
