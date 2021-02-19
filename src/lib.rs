@@ -34,7 +34,7 @@ pub struct Styled<T> {
 macro_rules! meth_color {
     ($meth:ident, $color:ident) => {
         pub fn $meth(self) -> Self {
-            self.on(Color::$color)
+            self.fg(Color::$color)
         }
     };
     ($meth:ident, $color:ident($($arg:ident),+)) => {
@@ -125,7 +125,7 @@ impl<T: Display> Display for Styled<T> {
 macro_rules! meth_color {
     ($meth:ident, $color:ident) => {
         fn $meth(self) -> Styled<Self> {
-            self.on(Color::$color)
+            self.fg(Color::$color)
         }
     };
     ($meth:ident, $color:ident($($arg:ident),+)) => {
