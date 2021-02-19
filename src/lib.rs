@@ -1,5 +1,6 @@
 use std::fmt;
 use std::fmt::Display;
+use std::ops::{Deref, DerefMut};
 
 use ansi_term::{Color, Style};
 
@@ -17,6 +18,20 @@ impl<T> Styled<T> {
             inner,
             style: Style::new(),
         }
+    }
+}
+
+impl<T> Deref for Styled<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<T> DerefMut for Styled<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
     }
 }
 
