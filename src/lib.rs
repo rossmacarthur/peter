@@ -1,106 +1,119 @@
-pub mod prelude;
-
 use std::fmt;
 use std::fmt::Display;
 
 use ansi_term::{Color, Style};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Colored<T> {
-    inner: T,
-    color: Color,
-}
-
+/// Wraps something in a [`Style`].
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Styled<T> {
     inner: T,
     style: Style,
 }
 
-pub trait Colorize<T> {
-    fn colored(&self, color: Color) -> Colored<&Self> {
-        Colored { inner: self, color }
-    }
-    fn black(&self) -> Colored<&Self> {
-        self.colored(Color::Black)
-    }
-    fn red(&self) -> Colored<&Self> {
-        self.colored(Color::Red)
-    }
-    fn green(&self) -> Colored<&Self> {
-        self.colored(Color::Green)
-    }
-    fn yellow(&self) -> Colored<&Self> {
-        self.colored(Color::Yellow)
-    }
-    fn blue(&self) -> Colored<&Self> {
-        self.colored(Color::Blue)
-    }
-    fn purple(&self) -> Colored<&Self> {
-        self.colored(Color::Purple)
-    }
-    fn cyan(&self) -> Colored<&Self> {
-        self.colored(Color::Cyan)
-    }
-    fn white(&self) -> Colored<&Self> {
-        self.colored(Color::White)
-    }
-    fn fixed(&self, n: u8) -> Colored<&Self> {
-        self.colored(Color::Fixed(n))
-    }
-    fn rgb(&self, r: u8, g: u8, b: u8) -> Colored<&Self> {
-        self.colored(Color::RGB(r, g, b))
-    }
-}
-
-pub trait Stylize<T> {
-    fn styled(&self, style: Style) -> Styled<&Self> {
-        Styled { inner: self, style }
-    }
-    fn bold(&self) -> Styled<&Self> {
-        self.styled(Style::new().bold())
-    }
-    fn dimmed(&self) -> Styled<&Self> {
-        self.styled(Style::new().dimmed())
-    }
-    fn italic(&self) -> Styled<&Self> {
-        self.styled(Style::new().italic())
-    }
-    fn underline(&self) -> Styled<&Self> {
-        self.styled(Style::new().underline())
-    }
-    fn blink(&self) -> Styled<&Self> {
-        self.styled(Style::new().blink())
-    }
-    fn reverse(&self) -> Styled<&Self> {
-        self.styled(Style::new().reverse())
-    }
-    fn hidden(&self) -> Styled<&Self> {
-        self.styled(Style::new().hidden())
-    }
-    fn strikethrough(&self) -> Styled<&Self> {
-        self.styled(Style::new().strikethrough())
-    }
-}
-
-impl<T: Display> Display for Colored<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        Display::fmt(&self.color.paint(self.inner.to_string()), f)
+impl<T> Styled<T> {
+    /// Construct a new `Styled`.
+    fn new(inner: T) -> Self {
+        Self {
+            inner,
+            style: Style::new(),
+        }
     }
 }
 
 impl<T: Display> Display for Styled<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        Display::fmt(&self.style.paint(self.inner.to_string()), f)
+        write!(f, "{}", self.style.prefix())?;
+        write!(f, "{}", self.inner)?;
+        write!(f, "{}", self.style.suffix())?;
+        Ok(())
+    }
+}
+
+macro_rules! meth_color {
+    ($meth:ident, $color:ident) => {
+        fn $meth(self) -> Styled<Self::Output> {
+            self.on(Color::$color)
+        }
+    };
+    ($meth:ident, $color:ident($($arg:ident),+)) => {
+        fn $meth(self, $($arg: u8),+) -> Styled<Self::Output> {
+            self.fg(Color::$color($($arg),+))
+        }
+    };
+}
+
+macro_rules! meth_style {
+    ($meth:ident) => {
+        fn $meth(self) -> Styled<Self::Output> {
+            let Styled { inner, style } = self.styled();
+            Styled {
+                inner,
+                style: style.$meth(),
+            }
+        }
+    };
+    ($meth:ident, $color:ident) => {
+        fn $meth(self, $color: Color) -> Styled<Self::Output> {
+            let Styled { inner, style } = self.styled();
+            Styled {
+                inner,
+                style: style.$meth($color),
+            }
+        }
+    };
+}
+
+/// Allows anything implementing `Display` to be styled.
+pub trait Stylize<T>: Sized {
+    type Output;
+
+    fn styled(self) -> Styled<Self::Output>;
+
+    // different styles
+    meth_style!(bold);
+    meth_style!(dimmed);
+    meth_style!(italic);
+    meth_style!(underline);
+    meth_style!(blink);
+    meth_style!(reverse);
+    meth_style!(hidden);
+    meth_style!(strikethrough);
+    meth_style!(fg, color);
+    meth_style!(on, color);
+
+    // different colors
+    meth_color!(black, Black);
+    meth_color!(red, Red);
+    meth_color!(green, Green);
+    meth_color!(yellow, Yellow);
+    meth_color!(blue, Blue);
+    meth_color!(magenta, Purple);
+    meth_color!(cyan, Cyan);
+    meth_color!(white, White);
+    meth_color!(fixed, Fixed(n));
+    meth_color!(rgb, RGB(r, g, b));
+}
+
+/// Special implementation for [`Styled`] to prevent unnecessary copying.
+impl<T> Stylize<T> for Styled<T>
+where
+    T: Display,
+{
+    type Output = T;
+
+    fn styled(self) -> Styled<Self::Output> {
+        self
     }
 }
 
 /// Blanket implementation for everything that implements [`Display`].
-///
-/// Note: this is includes [`Colored`] and [`Styled`].
-impl<T> Colorize<T> for T where T: Display {}
+impl<T> Stylize<T> for T
+where
+    T: Display,
+{
+    type Output = Self;
 
-/// Blanket implementation for everything that implements [`Display`].
-///
-/// Note: this is includes [`Colored`] and [`Styled`].
-impl<T> Stylize<T> for T where T: Display {}
+    fn styled(self) -> Styled<Self::Output> {
+        Styled::new(self)
+    }
+}
