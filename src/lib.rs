@@ -124,12 +124,12 @@ impl<T: Display> Display for Styled<T> {
 
 macro_rules! meth_color {
     ($meth:ident, $color:ident) => {
-        fn $meth(self) -> Styled<Self> {
+        fn $meth(&self) -> Styled<&Self> {
             self.fg(Color::$color)
         }
     };
     ($meth:ident, $color:ident($($arg:ident),+)) => {
-        fn $meth(self, $($arg: u8),+) -> Styled<Self> {
+        fn $meth(&self, $($arg: u8),+) -> Styled<&Self> {
             self.fg(Color::$color($($arg),+))
         }
     };
@@ -137,12 +137,12 @@ macro_rules! meth_color {
 
 macro_rules! meth_style {
     ($meth:ident) => {
-        fn $meth(self) -> Styled<Self> {
+        fn $meth(&self) -> Styled<&Self> {
             Styled::new(self).$meth()
         }
     };
     ($meth:ident, $color:ident) => {
-        fn $meth(self, $color: Color) -> Styled<Self> {
+        fn $meth(&self, $color: Color) -> Styled<&Self> {
             Styled::new(self).$meth($color)
         }
     };
