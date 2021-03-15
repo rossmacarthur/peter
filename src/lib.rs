@@ -1,179 +1,165 @@
-//! Peter builds on the [`ansi_term`] crate to allow styling of anything
+//! Peter builds on the [`termion`] crate to allow styling of anything
 //! implementing [`Display`] and makes colorizing text less verbose to use by
 //! providing the [`Stylize`] trait.
 //!
 //! # Examples
 //!
 //! ```rust
-//! use peter::Stylize;
+//! use peter::{color, style, Stylize};
 //!
-//! println!("This is in red: {}", "a red string".red());
+//! println!("This is in red: {}", "a red string".fg(color::Red));
 //!
-//! println!("How about some {}?", "bold and underline".bold().underline());
+//! println!(
+//!     "How about some {}?",
+//!     "bold and underline"
+//!         .style(style::Bold)
+//!         .style(style::Underline)
+//! );
 //! ```
 
-#![no_std]
+mod impl_style;
 
-use core::fmt;
-use core::fmt::Display;
-use core::ops::{Deref, DerefMut};
+use std::fmt;
+use std::fmt::Display;
+use std::ops::{Deref, DerefMut};
 
-use ansi_term::Style;
+use termion::color::Color;
+pub use termion::{color, style};
 
-/// See [`ansi_term::Color`].
-///
-pub use ansi_term::Color;
+use crate::impl_style::Style;
 
-/// Wraps something in a [`Style`].
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Styled<T> {
-    inner: T,
-    style: Style,
+pub trait Stylize: Display {
+    fn fg<C: Color>(&self, color: C) -> Fg<&Self, C> {
+        Fg::new(self, color)
+    }
+    fn bg<C: Color>(&self, color: C) -> Bg<&Self, C> {
+        Bg::new(self, color)
+    }
+    fn style<S: Style>(&self, style: S) -> Styled<&Self, S> {
+        Styled::new(self, style)
+    }
 }
 
-macro_rules! meth_color {
-    ($meth:ident, $color:ident) => {
-        pub fn $meth(self) -> Self {
-            self.fg(Color::$color)
-        }
-    };
-    ($meth:ident, $color:ident($($arg:ident),+)) => {
-        pub fn $meth(self, $($arg: u8),+) -> Self {
-            self.fg(Color::$color($($arg),+))
-        }
-    };
+/// Wraps something in a foreground color.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Fg<D: Display, C: Color> {
+    inner: D,
+    color: C,
 }
 
-macro_rules! meth_style {
-    ($meth:ident) => {
-        pub fn $meth(self) -> Self {
-            let Self { inner, style } = self;
-            Self {
-                inner,
-                style: style.$meth(),
-            }
-        }
-    };
-    ($meth:ident, $color:ident) => {
-        pub fn $meth(self, $color: Color) -> Self {
-            let Self { inner, style } = self;
-            Self {
-                inner,
-                style: style.$meth($color),
-            }
-        }
-    };
+/// Wraps something in a background color.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Bg<D: Display, C: Color> {
+    inner: D,
+    color: C,
 }
 
-impl<T> Styled<T> {
-    /// Construct a new `Styled`.
-    fn new(inner: T) -> Self {
-        Self {
-            inner,
-            style: Style::new(),
-        }
+/// Wraps something in a style.
+pub struct Styled<D: Display, S: Style> {
+    inner: D,
+    style: S,
+}
+
+impl<D: Display, C: Color> Fg<D, C> {
+    /// Construct a new `Fg`.
+    fn new(inner: D, color: C) -> Self {
+        Self { inner, color }
     }
 
-    // different styles
-    meth_style!(bold);
-    meth_style!(dimmed);
-    meth_style!(italic);
-    meth_style!(underline);
-    meth_style!(blink);
-    meth_style!(reverse);
-    meth_style!(hidden);
-    meth_style!(strikethrough);
-    meth_style!(fg, color);
-    meth_style!(on, color);
-
-    // different colors
-    meth_color!(black, Black);
-    meth_color!(red, Red);
-    meth_color!(green, Green);
-    meth_color!(yellow, Yellow);
-    meth_color!(blue, Blue);
-    meth_color!(magenta, Purple);
-    meth_color!(cyan, Cyan);
-    meth_color!(white, White);
-    meth_color!(fixed, Fixed(n));
-    meth_color!(rgb, RGB(r, g, b));
+    pub fn fg(mut self, color: C) -> Self {
+        self.color = color;
+        self
+    }
 }
 
-impl<T> Deref for Styled<T> {
-    type Target = T;
+impl<D: Display, C: Color> Bg<D, C> {
+    /// Construct a new `Bg`.
+    fn new(inner: D, color: C) -> Self {
+        Self { inner, color }
+    }
+
+    pub fn bg(mut self, color: C) -> Self {
+        self.color = color;
+        self
+    }
+}
+
+impl<D: Display, S: Style> Styled<D, S> {
+    fn new(inner: D, style: S) -> Self {
+        Self { inner, style }
+    }
+}
+
+impl<D: Display, C: Color> Deref for Fg<D, C> {
+    type Target = D;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
 
-impl<T> DerefMut for Styled<T> {
+impl<D: Display, C: Color> DerefMut for Fg<D, C> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
 }
 
-impl<T: Display> Display for Styled<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.style.prefix())?;
-        write!(f, "{}", self.inner)?;
-        write!(f, "{}", self.style.suffix())?;
-        Ok(())
+impl<D: Display, C: Color> Deref for Bg<D, C> {
+    type Target = D;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
     }
 }
 
-macro_rules! meth_color {
-    ($meth:ident, $color:ident) => {
-        fn $meth(&self) -> Styled<&Self> {
-            self.fg(Color::$color)
-        }
-    };
-    ($meth:ident, $color:ident($($arg:ident),+)) => {
-        fn $meth(&self, $($arg: u8),+) -> Styled<&Self> {
-            self.fg(Color::$color($($arg),+))
-        }
-    };
+impl<D: Display, C: Color> DerefMut for Bg<D, C> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
 }
 
-macro_rules! meth_style {
-    ($meth:ident) => {
-        fn $meth(&self) -> Styled<&Self> {
-            Styled::new(self).$meth()
-        }
-    };
-    ($meth:ident, $color:ident) => {
-        fn $meth(&self, $color: Color) -> Styled<&Self> {
-            Styled::new(self).$meth($color)
-        }
-    };
+impl<D: Display, S: Style> Deref for Styled<D, S> {
+    type Target = D;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
 }
 
-/// Allows anything implementing [`Display`] to be styled.
-pub trait Stylize<T>: Sized {
-    // different styles
-    meth_style!(bold);
-    meth_style!(dimmed);
-    meth_style!(italic);
-    meth_style!(underline);
-    meth_style!(blink);
-    meth_style!(reverse);
-    meth_style!(hidden);
-    meth_style!(strikethrough);
-    meth_style!(fg, color);
-    meth_style!(on, color);
-
-    // different colors
-    meth_color!(black, Black);
-    meth_color!(red, Red);
-    meth_color!(green, Green);
-    meth_color!(yellow, Yellow);
-    meth_color!(blue, Blue);
-    meth_color!(magenta, Purple);
-    meth_color!(cyan, Cyan);
-    meth_color!(white, White);
-    meth_color!(fixed, Fixed(n));
-    meth_color!(rgb, RGB(r, g, b));
+impl<D: Display, S: Style> DerefMut for Styled<D, S> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
 }
 
-/// Blanket implementation for everything that implements [`Display`].
-impl<T> Stylize<T> for T where T: Display {}
+impl<D: Display, C: Color + Copy> Display for Fg<D, C> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}{}{}",
+            color::Fg(self.color),
+            self.inner,
+            color::Fg(color::Reset)
+        )
+    }
+}
+
+impl<D: Display, C: Color + Copy> Display for Bg<D, C> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}{}{}",
+            color::Bg(self.color),
+            self.inner,
+            color::Bg(color::Reset)
+        )
+    }
+}
+
+impl<D: Display, S: Style + Copy> Display for Styled<D, S> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.style.write_styled(f, &self.inner)
+    }
+}
+
+impl<T> Stylize for T where T: Display {}

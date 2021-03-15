@@ -11,4 +11,4 @@ keywords = ["color", "style", "term", "ansi"]
 categories = ["command-line-interface", "no-std"]
 
 [dependencies]
-ansi_term = "0.12"
+termion = "1.5.6"
