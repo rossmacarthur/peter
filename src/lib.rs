@@ -116,7 +116,7 @@ impl<T> DerefMut for Styled<T> {
 impl<T: Display> Display for Styled<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.style.prefix())?;
-        write!(f, "{}", self.inner)?;
+        Display::fmt(&self.inner, f)?;
         write!(f, "{}", self.style.suffix())?;
         Ok(())
     }
